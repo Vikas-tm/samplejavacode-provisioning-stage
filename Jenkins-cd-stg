@@ -1,0 +1,42 @@
+node {
+    try {
+        notify ('Job Started')
+  
+       stage('Git-Checkout') {
+       git 'https://github.com/Vikas-tm/samplejavacode-provisioning-stage.git'
+       }
+
+	stage('Downloading artifact')
+	{
+		def server = Artifactory.server 'vik-artifactory'
+		def downloadSpec="""{
+			"files":[
+					{
+					"pattern":"M1036759/addressbook.war",
+					"target":"/var/lib/jenkins/workspace/addressbook-pipeline-cd-stg/"
+					}
+					]
+							}"""
+				server.download(downloadSpec)
+	}
+  
+     stage('Docker-Stage-Deployment') {
+    sh label: '', script: 'sudo docker-compose up -d --build'
+     }
+	 notify ('Job ended')
+	 }
+	catch(err) {
+  notify("Error ${err}")
+currentBuild.result = 'FAILURE'
+	}
+	}
+
+def notify(status){
+    emailext (
+	to: "vikas.tm@gmail.com",
+	subject: "${status}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+	 body: """<p>${status}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p>
+	<p>Check console output at <a href='${env.BUILD_URL}'>${env.JOB_NAME} [${env.BUILD_NUMBER}]</a></p>""",
+		)
+	} 
+	 
